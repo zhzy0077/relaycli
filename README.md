@@ -74,3 +74,27 @@ Returns:
 ## Deployment
 
 A `Dockerfile` is provided for the gateway, and a GitHub Action automatically builds and pushes the image to GitHub Container Registry (GHCR) on `main` branch updates.
+
+You can easily run the latest `main` gateway image using Docker Compose:
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  relay-gateway:
+    image: ghcr.io/zhzy0077/relaycli-gateway:main
+    container_name: relay-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # REST API
+      - "9000:9000" # WebSocket
+    environment:
+      - RELAY_AGENT_TOKEN=your-agent-secret
+      - RELAY_API_TOKEN=your-api-secret
+```
+
+Then run:
+```bash
+docker-compose up -d
+```

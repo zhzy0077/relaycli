@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  relay-gateway:
+    image: ghcr.io/zhzy0077/relaycli-gateway:main
+    container_name: relay-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # REST API
+      - "9000:9000" # WebSocket
+    environment:
+      - RELAY_AGENT_TOKEN=your-agent-secret
+      - RELAY_API_TOKEN=your-api-secret
+      - RELAY_WS_PORT=9000
+      - RELAY_API_PORT=8080
