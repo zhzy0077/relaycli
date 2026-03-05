@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use relay_common::{CommandResultPayload, WsMessage};
+use relay_common::WsMessage;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
