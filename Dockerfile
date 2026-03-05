@@ -3,6 +3,10 @@ FROM rust:1.80-slim-bookworm as builder
 
 WORKDIR /usr/src/app
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+
 # Copy the entire workspace
 COPY Cargo.toml Cargo.lock ./
 COPY relay-common ./relay-common
