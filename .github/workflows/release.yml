@@ -66,6 +66,20 @@ jobs:
           Copy-Item target\${{ matrix.target }}\release\relay-agent.exe release_pkg\
           Compress-Archive -Path release_pkg\* -DestinationPath relaycli-${{ matrix.name }}.zip
 
+      - name: Upload Release Artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: relaycli-${{ matrix.name }}
+          path: relaycli-${{ matrix.name }}.tar.gz
+          
+      - name: Upload Release Artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: relaycli-${{ matrix.name }}
+          path: relaycli-${{ matrix.name }}.zip
+
       - name: Upload Release Asset (Linux)
         if: runner.os == 'Linux' && github.event_name == 'release'
         uses: softprops/action-gh-release@v2
