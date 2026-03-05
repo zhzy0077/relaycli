@@ -58,8 +58,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. Connect loop (with retry)
     loop {
         let req = request.clone();
-        match connect_async(req).await {
-            Ok((ws_stream, _)) => {
+        match tokio::time::timeout(Duration::from_secs(10), connect_async(req)).await {
+            Ok(Ok((ws_stream, _))) => {
                 info!("Connected successfully!");
                 let (mut write, mut read) = ws_stream.split();
 
@@ -147,8 +147,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     _ = (&mut recv_task) => send_task.abort(),
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 error!("Failed to connect to gateway: {}. Retrying in 5s...", e);
+            }
+            Err(_) => {
+                error!("Connection attempt timed out. Retrying in 5s...");
             }
         }
         sleep(Duration::from_secs(5)).await;
