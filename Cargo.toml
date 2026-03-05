@@ -1,0 +1,3 @@
+[workspace]
+members = ["relay-common", "relay-gateway", "relay-agent"]
+resolver = "3"
