@@ -61,45 +61,60 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
     // Spawn task to read messages from the WebSocket and handle them
     let state_clone = Arc::clone(&state);
     let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(Message::Text(text))) = receiver.next().await {
-            if let Ok(msg) = serde_json::from_str::<WsMessage>(&text) {
-                match msg {
-                    WsMessage::RegisterDevice {
-                        device_id,
-                        device_name,
-                        hostname,
-                        os,
-                    } => {
-                        info!("Device registered: {} ({})", device_name, device_id);
-                        device_id_opt = Some(device_id.clone());
-                        state_clone.devices.insert(
-                            device_id.clone(),
-                            DeviceInfo {
+        loop {
+            match tokio::time::timeout(std::time::Duration::from_secs(60), receiver.next()).await {
+                Ok(Some(Ok(Message::Text(text)))) => {
+                    if let Ok(msg) = serde_json::from_str::<WsMessage>(&text) {
+                        match msg {
+                            WsMessage::RegisterDevice {
                                 device_id,
                                 device_name,
                                 hostname,
                                 os,
-                                ws_sender: tx.clone(),
-                            },
-                        );
-                        let _ = tx.send(WsMessage::RegisterAck {
-                            ok: true,
-                            message: None,
-                        });
-                    }
-                    WsMessage::CommandResult(payload) => {
-                        let command_id = payload.command_id.clone();
-                        if let Some((_, oneshot_tx)) =
-                            state_clone.pending_commands.remove(&command_id)
-                        {
-                            let _ = oneshot_tx.send(payload);
+                            } => {
+                                info!("Device registered: {} ({})", device_name, device_id);
+                                device_id_opt = Some(device_id.clone());
+                                state_clone.devices.insert(
+                                    device_id.clone(),
+                                    DeviceInfo {
+                                        device_id,
+                                        device_name,
+                                        hostname,
+                                        os,
+                                        ws_sender: tx.clone(),
+                                    },
+                                );
+                                let _ = tx.send(WsMessage::RegisterAck {
+                                    ok: true,
+                                    message: None,
+                                });
+                            }
+                            WsMessage::CommandResult(payload) => {
+                                let command_id = payload.command_id.clone();
+                                if let Some((_, oneshot_tx)) =
+                                    state_clone.pending_commands.remove(&command_id)
+                                {
+                                    let _ = oneshot_tx.send(payload);
+                                }
+                            }
+                            WsMessage::Heartbeat => {
+                                let _ = tx.send(WsMessage::HeartbeatAck);
+                            }
+                            _ => {}
                         }
                     }
-                    WsMessage::Heartbeat => {
-                        let _ = tx.send(WsMessage::HeartbeatAck);
-                    }
-                    _ => {}
                 }
+                Ok(Some(Ok(Message::Close(_)))) | Ok(None) | Ok(Some(Err(_))) => {
+                    break;
+                }
+                Err(_) => {
+                    warn!(
+                        "Device heartbeat timeout for {:?}. Removing connection.",
+                        device_id_opt
+                    );
+                    break;
+                }
+                _ => {}
             }
         }
         device_id_opt // Return the device_id so we know what to unregister

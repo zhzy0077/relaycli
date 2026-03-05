@@ -20,8 +20,7 @@ The gateway is configured via environment variables:
 
 - `RELAY_AGENT_TOKEN`: Token required for agents to connect (Passed in the WebSocket `Authorization` header).
 - `RELAY_API_TOKEN`: Token required for users to execute commands (Passed as an HTTP Bearer token).
-- `RELAY_WS_PORT`: WebSocket port (default `9000`).
-- `RELAY_API_PORT`: REST API port (default `8080`).
+- `RELAY_PORT`: Unified port for REST API and WebSocket connections (default `8080`).
 
 ```bash
 export RELAY_AGENT_TOKEN="your-agent-secret"
@@ -34,7 +33,7 @@ cargo run --release -p relay-gateway
 The agent is configured via a TOML file (default `agent.toml`):
 
 ```toml
-gateway_url = "wss://your-gateway.example.com"
+gateway_url = "wss://your-gateway.example.com/ws/"
 token = "your-agent-secret"
 device_name = "my-raspberry-pi"
 # device_id = "optional-static-uuid" 
@@ -87,11 +86,11 @@ services:
     container_name: relay-gateway
     restart: unless-stopped
     ports:
-      - "8080:8080" # REST API
-      - "9000:9000" # WebSocket
+      - "8080:8080" # REST API & WebSocket
     environment:
       - RELAY_AGENT_TOKEN=your-agent-secret
       - RELAY_API_TOKEN=your-api-secret
+      - RELAY_PORT=8080
 ```
 
 Then run:

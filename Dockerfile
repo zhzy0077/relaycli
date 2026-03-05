@@ -28,13 +28,11 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 COPY --from=builder /usr/src/app/target/release/relay-gateway /usr/local/bin/
 
 # Expose WS and HTTP ports
-EXPOSE 9000
 EXPOSE 8080
 
 # Environment variables expected at runtime (can be overridden)
 ENV RELAY_AGENT_TOKEN=""
 ENV RELAY_API_TOKEN=""
-ENV RELAY_WS_PORT="9000"
 ENV RELAY_API_PORT="8080"
 
 ENTRYPOINT ["relay-gateway"]

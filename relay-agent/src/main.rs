@@ -87,6 +87,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     os,
                 });
 
+                let tx_heartbeat = tx.clone();
+                let mut heartbeat_task = tokio::spawn(async move {
+                    loop {
+                        sleep(Duration::from_secs(30)).await;
+                        if tx_heartbeat.send(WsMessage::Heartbeat).is_err() {
+                            break;
+                        }
+                    }
+                });
+
                 let tx_clone = tx.clone();
 
                 let mut recv_task = tokio::spawn(async move {
@@ -143,8 +153,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
 
                 tokio::select! {
-                    _ = (&mut send_task) => recv_task.abort(),
-                    _ = (&mut recv_task) => send_task.abort(),
+                    _ = (&mut send_task) => {
+                        recv_task.abort();
+                        heartbeat_task.abort();
+                    }
+                    _ = (&mut recv_task) => {
+                        send_task.abort();
+                        heartbeat_task.abort();
+                    }
+                    _ = (&mut heartbeat_task) => {
+                        send_task.abort();
+                        recv_task.abort();
+                    }
                 }
             }
             Ok(Err(e)) => {

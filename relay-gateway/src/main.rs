@@ -1,8 +1,9 @@
-use axum::{Router, routing::get};
+use axum::routing::get;
 use clap::Parser;
 use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 use tracing::info;
 
 mod api;
@@ -21,11 +22,8 @@ struct Args {
     #[arg(long, env = "RELAY_API_TOKEN")]
     api_token: String,
 
-    #[arg(long, env = "RELAY_WS_PORT", default_value_t = 9000)]
-    ws_port: u16,
-
-    #[arg(long, env = "RELAY_API_PORT", default_value_t = 8080)]
-    api_port: u16,
+    #[arg(long, env = "RELAY_PORT", default_value_t = 8080)]
+    port: u16,
 }
 
 #[tokio::main]
@@ -46,36 +44,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pending_commands: DashMap::new(),
     });
 
-    // API Server
-    let api_state = state.clone();
-    let api_router = api::router().with_state(api_state);
-    let api_addr = format!("0.0.0.0:{}", args.api_port);
-    let api_listener = TcpListener::bind(&api_addr).await?;
-
-    // WS Server
-    let ws_state = state.clone();
-    let ws_router = Router::new()
-        .route("/", get(ws::ws_handler))
-        .with_state(ws_state);
-    let ws_addr = format!("0.0.0.0:{}", args.ws_port);
-    let ws_listener = TcpListener::bind(&ws_addr).await?;
+    // Unified Server
+    let app_state = state.clone();
+    let app_router = api::router()
+        .route("/ws/", get(ws::ws_handler))
+        .with_state(app_state)
+        .layer(TraceLayer::new_for_http());
+    let addr = format!("0.0.0.0:{}", args.port);
+    let listener = TcpListener::bind(&addr).await?;
 
     info!("Starting Gateway Server...");
-    info!("REST API listening on {}", api_addr);
-    info!("WebSocket listening on {}", ws_addr);
+    info!("Listening on {}", addr);
 
-    // Run both servers concurrently
-    tokio::select! {
-        res = axum::serve(api_listener, api_router) => {
-            if let Err(e) = res {
-                tracing::error!("API server error: {}", e);
-            }
-        }
-        res = axum::serve(ws_listener, ws_router) => {
-            if let Err(e) = res {
-                tracing::error!("WS server error: {}", e);
-            }
-        }
+    if let Err(e) = axum::serve(listener, app_router).await {
+        tracing::error!("Server error: {}", e);
     }
 
     Ok(())
