@@ -33,7 +33,7 @@ cargo run --release -p relay-gateway
 The agent is configured via a TOML file (default `agent.toml`):
 
 ```toml
-gateway_url = "wss://your-gateway.example.com/ws/"
+gateway_url = "wss://your-gateway.example.com/ws"
 token = "your-agent-secret"
 device_name = "my-raspberry-pi"
 # device_id = "optional-static-uuid" 

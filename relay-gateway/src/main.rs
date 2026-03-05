@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Unified Server
     let app_state = state.clone();
     let app_router = api::router()
-        .route("/ws/", get(ws::ws_handler))
+        .route("/ws", get(ws::ws_handler))
         .with_state(app_state)
         .layer(TraceLayer::new_for_http());
     let addr = format!("0.0.0.0:{}", args.port);
